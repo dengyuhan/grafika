@@ -16,6 +16,10 @@
 
 package com.android.grafika;
 
+import android.app.Activity;
+import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
+import android.media.CamcorderProfile;
 import android.opengl.EGL14;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -36,9 +40,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.app.Activity;
-import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
 import android.widget.Toast;
 
 import com.android.grafika.gles.FullFrameRect;
@@ -154,7 +155,7 @@ public class CameraCaptureActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_capture);
 
-        File outputFile = new File(getFilesDir(), "camera-test.mp4");
+        File outputFile = new File(getExternalCacheDir(), "camera-test.mp4");
         TextView fileText = (TextView) findViewById(R.id.cameraOutputFile_text);
         fileText.setText(outputFile.toString());
 
@@ -276,7 +277,7 @@ public class CameraCaptureActivity extends Activity
         int numCameras = Camera.getNumberOfCameras();
         for (int i = 0; i < numCameras; i++) {
             Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
                 mCamera = Camera.open(i);
                 break;
             }
@@ -296,6 +297,9 @@ public class CameraCaptureActivity extends Activity
         // Give the camera a hint that we're recording video.  This can have a big
         // impact on frame rate.
         parms.setRecordingHint(true);
+
+        //自动对焦
+        parms.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
 
         // leave the frame rate set to default
         mCamera.setParameters(parms);
@@ -691,8 +695,9 @@ class CameraSurfaceRenderer implements GLSurfaceView.Renderer {
                 case RECORDING_OFF:
                     Log.d(TAG, "START recording");
                     // start recording
+                    final CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH);
                     mVideoEncoder.startRecording(new TextureMovieEncoder.EncoderConfig(
-                            mOutputFile, 640, 480, 1000000, EGL14.eglGetCurrentContext()));
+                            mOutputFile, profile.videoFrameHeight, profile.videoFrameWidth, profile.videoBitRate, EGL14.eglGetCurrentContext()));
                     mRecordingStatus = RECORDING_ON;
                     break;
                 case RECORDING_RESUMED:
